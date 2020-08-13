@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html>
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=.7, maximum-scale=1">
+<title>よじ</title>
+<style>
+#main {
+  display:none;
+}
+h1 {
+  padding:0 10px;
+  margin:0;
+  background-color: #bdb;
+  font-size: 20px;
+}
+.read a {
+    background-color: #ddd;
+    padding: 0 2px;
+    margin: 1px;
+    color: #113;
+    text-decoration:none;
+}
+.read a.o {
+    background-color: #fcc;
+}
+.read a.p {
+    background-color: #ffc;
+}
+.read a.a {
+    background-color: #cfc;
+}
+.read a.s {
+    background-color: #ccf;
+}
+.headword {
+    background-color: #bcb;
+    font-size:25px;
+    line-height:30px;
+    padding: 0 2px;
+    text-decoration:none;
+    color: #311;
+    font-family: serif;
+    margin: 1px;
+}
+a.ext {
+    border: 1px solid #cdc;
+    border-radius: 15px;
+    background-color: #efe;
+    display: inline-block;
+    font-size: 13px;
+    padding: 4px;
+    color:black;
+    text-decoration:none;
+}
+span.variants {
+    display:inline-block;
+}
+
+a.ext:hover {
+    text-decoration:underline;
+    color:blue;
+}
+td {
+    padding: 3px;
+}
+td {
+    white-space:nowrap;
+}
+td:nth-child(6),
+td:nth-child(7),
+td:nth-child(8)
+{
+    white-space:normal;
+}
+h2 {
+  background-color:#fdc;
+  margin:0;
+  font-size:18px;
+}
+h3 {
+  margin: 3px;
+  padding: 0 5px;
+  font: 15px normal;
+  border:1px solid orange;
+  background-color: #edb;
+  border-radius:15px;
+  display:inline-block;
+}
+#quiz ul {
+  padding: 0 20px;
+  margin: 0 0;
+}
+#timer {
+  border-radius: 50%;
+  background-color: #8dd;
+  width: 30px;
+  height: 30px;
+  line-height:30px;
+  margin: 2px;
+  display:inline-block;
+text-align:center;
+}
+table, th, td {
+    border-collapse: collapse;
+    border: 1px solid #ccc;
+    line-height: 1.5;
+}
+    .mean {
+        color:blue;
+        cursor:pointer;
+        text-decoration:underline;
+    }
+    .meanx {
+        position:relative;
+    }
+    .meanx div {
+        position:absolute;
+        width: 200px;
+        top: 0px;
+        left:0px;
+        background-color:#fdd;
+        z-index:2;
+    }
+
+#idiomlist, #kanjilist {
+    display:flex;
+    flex-wrap: wrap;
+}
+#kanjilist .kanji {
+    display: block;
+    border: 1px solid green;
+    width: 200px;
+//    padding: 3px;
+    margin: 3px;
+}
+.kanji .headword {
+    display:block;
+    float:left;
+}
+
+#idiomlist .idiom {
+    display: block;
+    border: 1px solid green;
+    width: 200px;
+    line-height: 25px;
+//    padding: 3px;
+    margin: 3px;
+}
+    .freq {
+        font-size:10px;
+    }
+.idiom .id {
+    font-size:10pt;
+}
+.idiom .td:nth-child(1)
+{
+    float:right;
+    text-align:right;
+}
+.idiom .td:nth-child(2)
+{
+    background-color: #ded;
+    padding:2px;
+    min-height: 55px;
+}
+.idiom .td:nth-child(3)
+{
+    //background-color: #dde;
+    padding:2px;
+    min-height: 50px;
+}
+.idiom .td:nth-child(4)
+{
+    line-height:15px;
+}
+.idiom .td:nth-child(5),
+.idiom .td:nth-child(6),
+.idiom .td:nth-child(7),
+.idiom .td:nth-child(8)
+{
+    white-space:normal;
+    display:none;
+    background-color:#ddb;
+    padding: 2px;
+}
+ .idiom .td:nth-child(5) span {
+        font-size:10pt;
+        line-height:12pt;
+        display:block;
+     white-space:normal;
+     background-color: #eec;
+     border: 1px solid gray;
+     padding: 1px;
+    border-radius: 4px;
+}
+
+
+</style>
+</head>
+<body>
+    <h1><a href="#">四字熟語集</a></h1>
+    検索: <input id="search" style="font-size:15pt;" />
+    <label><input type=radio name=sort id=hansort checked>漢字順</label>
+    <label><input type=radio name=sort id=kanasort>かな順</label>
+    <div id=result>Loading...</div>
+</body>
+<script>
+const $id = (id) => document.getElementById(id);
+const $ = (query) => document.querySelectorAll(query);
+
+const getfile = (fname, cb) => {
+    const ajax = new XMLHttpRequest();
+    ajax.onreadystatechange = () => {
+        if (ajax.readyState != 4) return;
+        if (ajax.status != 200) return;
+        cb(ajax);
+    };
+    ajax.open("GET", fname, true);
+    ajax.send(null);
+};
+
+String.prototype.toKatakana = function() {
+    return this.replace(/[ぁ-ゖ]/g, (match) => String.fromCharCode(match.charCodeAt(0) + 0x60));
+};
+
+String.prototype.normalize = function() {
+    let s = this;
+
+    ["仭仞","侭儘","侠俠","倶俱","兔兎","鳬鳧","龜亀","冰氷","壷壺","凛凜","厦廈","廚厨","呑吞","剥剝","呍吽","唖啞","噛嚙",
+     "嚢囊","堯尭","填塡","妍姸","艷艶","屏屛","屭屓","巖巌","并幷","彌弥","慚慙","掻搔","昿曠","彌弥","覊羈","曾曽","涌湧",
+     "涛濤","渕淵","溌潑","濶闊","烟煙","焔焰","煕熙","瑤瑶","畴疇","瘦痩","躯軀","眦眥","砺礪","礙碍","祷禱","箪簞","篭籠",
+     "箪簞","絏紲","繍繡","繋繫","纒纏","脣唇","莱萊","薀蘊","蝉蟬","蝿蠅","蝉蟬","諌諫","譛譖","讎讐","豬猪","賎賤","讚讃",
+     "躙躪","躯軀","輭軟","迩邇","遙遥","鈎鉤","頬頰","顛顚","飜翻","餠餅","鴬鶯","鴎鷗","麪麺","麵麺","鼃蛙","叱𠮟","麁麤"]
+        .forEach(v => {
+            const r = Array.from(v);
+            s = s.split(r[0]).join(r[1]);
+        });
+     
+    return s;
+};
+const conv = {
+    hira: (s) => s.toLowerCase()
+        .replace(/[ァ-ヶ]/g, (match) => String.fromCharCode(match.charCodeAt(0) - 0x60))
+        .split("").filter(c => "「」『』/*#1234y:;+".indexOf(c) == -1).join(""),
+
+    seion: (a) => conv.hira(a).split("").map(c => {
+        let n = "がぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽゃゅょっ".indexOf(c);
+        if (n < 0) return c;
+        return "かきくけこさしすせそたちつてとはひふへほはひふへほやゆよつ".slice(n, n + 1);
+    }).join(""),
+};
+
+const idiom = {
+    table:[],
+};
+
+const onloader = () => {
+
+    const resort = () => {
+        if ($id("kanasort").checked)
+            return idiom.table.sort((a,b) => conv.seion(a.read[0]) < conv.seion(b.read[0]) ? -1 : 1);
+        if ($id("hansort").checked)
+            return idiom.table.sort((a,b) => a.word[0] < b.word[0] ? -1 : 1);
+        idiom.table.sort((a,b) => a.id - b.id);
+    };
+
+    const display_read = (r) => {
+        let spanning = (v,x) => v.split("/").map((c,i) => {
+            let css = "";
+            if (!x) x = 1;
+            if (c.match(/[ぁ-ゖ]/)) css = " class=o";
+            if (c.indexOf("*")!=-1) css = " class=s";
+            return '<a href="#q=' + (x + i) + ":" + c + '"' + css + '>' + c + "</a>";
+        }).join("");
+
+        let ret = [];
+        ret[0] = spanning(r[0]);//)).join("");
+        if (1 < r.length) {
+            ret[1] = r.slice(1).map(r1 => {
+                let x = parseInt(r1.split(":").shift());
+                return "<span class=variants>(" + r1.replace(/[ぁ-ヶ\/]+/, v => spanning(v, x)) + ")";
+            }).join("");
+        }
+        return ret.join("<br>");
+    };
+
+    const dump_row = (v,i) => {
+        if (!v.id) v.id = "none";
+        let row = [];
+        {
+            let ret = "<span class=id>" + i + "</span><br>"
+            if (v.replaceable) ret += "<a href='#q=" + v.word[0].slice(0,2) + "," + v.word[0].slice(2,4)+ "'>⇔</a>";
+            if (v.meanref) ret += " <a href='#q=eq:" + encodeURI(v.meanref) + "'>同</a>";
+            if (v.mean || v.meant || v.src) ret += ' <span class="mean">▼</span>';
+            row.push(ret);
+        }
+        
+        try {
+            let ret = v.word.map(
+                (w, i) =>
+                    (i ? "<span class=variant>(" : "") + 
+                    Array.from(w)
+                    .map(c => c.match(/[0-9:=#]+/) ? c : '<a href="#q=' + encodeURI(c) + '"' + (i ? '' : 'class=headword') + '>' + c + '</a>')
+                    .join("") + (i ? ")</span>" : "<br>")
+            ).join("");
+            row.push(ret);
+        } catch(e) {console.log(v);}
+        row.push("<span class=read>" + display_read(v.read) + "</span>");
+
+        let searchkey = v => {
+            let key = v.word[0].split("之").join("の");
+            if (v.read[0].split("/")[1].slice(-1) == "の") key = v.word[0].slice(0,2) + "の" + v.word[0].slice(2,4);
+            return key;
+        };
+
+        let links = [
+            { key:"goo",
+              name: "Goo",
+              geturl: path => "https://dictionary.goo.ne.jp/word/" + (("/_".indexOf(path.slice(0, 1)) == -1) ? path : (v.word[0] + path))
+            },
+            { key:"kb",
+              name: "コトバンク",
+              geturl: path => "https://kotobank.jp/" + (path =="#" ? "gs/?q=" : "word/") + encodeURI(searchkey(v))
+            },
+            { key:"smk",
+              name:"新明解",
+              geturl: path => path == "#" ? "" : ("https://dictionary.goo.ne.jp/word/" + (("/_".indexOf(path.slice(0, 1)) == -1) ? path : (v.word[0] + path)))
+            },
+            { key:"kk",
+              name: "漢検",
+              geturl: path => "https://www.kanjipedia.jp/" +
+              (path == "#" ? ("search/?wt=1&sk=leftHand&t=kotoba&k=" + encodeURI(searchkey(v))) : ("kotoba/" + path))
+            },
+            { key:"yji",
+              name: "Online",
+              geturl: path => "https://yoji.jitenon.jp/" + path + ".html"
+            },
+            { key:"dkw",
+              name: "大漢和",
+              geturl: path => ""
+            },
+        ].map(ref => {
+            let key = ref.key;
+            if (!v[key]) return;
+
+            return v[key].split(";").map(path => {
+                let ret = {
+                    name: ref.name,
+                    url: ref.geturl(path),
+                };
+                if (key == "goo")
+                    ret.name = ["新明解","学研","大辞泉"][["sanseido","gakken","jn"].findIndex(c => path.split("#").pop().indexOf(c) != -1)];
+                else if (path.indexOf("#") != -1)
+                    ret.name = "(" + ret.name + ")";
+                return ret;
+            });
+        }).flat().filter(v => v);
+
+        {
+            let ret = links.map(link => "<a " +
+                                [["href", link.url], ["target","_blank"], ["class", "ext"]].map(v => !v[1]  ? "" : (v[0] + '="' + v[1] + '"')).join(" ")
+                                + ">" + link.name + "</a>").join("");
+            if (v.meanx) ret += '<span class="meanx">[+]<div style="display:none">' + v.meanx.map(v => "<li>"+v) + "</div></span>";
+
+            if (location.href.indexOf("?debug") != -1) {
+                ret += ( " <a href='https://kotobank.jp/gs/?q=" + encodeURI(searchkey(v)) + "' target=_blank>k</a>");
+                ret += ( " <a href='http://google.com/search?q=" + encodeURI(v.word[0]) + "' target=_blank>g</a>");
+                ret += "<span style='font-size:8pt'>" + v.id +'</span>';
+            }
+            row.push(ret);
+        }
+
+        if (v.mean || v.meant || v.src) {
+            let ret = v.mean ? v.mean : "";
+            ret += v.meant ? "<span>" + v.meant + "</span>" : "";
+            ret += v.src ? "<span>" + v.src + "</span>" : "";
+            row.push(ret);
+        }
+
+        return "<div class=idiom>" + row.map(h => "<div class=td>" + h + "</div>").join("") + "</div>";
+    };
+
+    const make_word_var = (vword) => {
+        if (vword.length == 1) return vword;
+
+        // make variation table
+        let ret = [vword[0]];
+        vword.slice(1).forEach(w => {
+            w = w.split("?").join("");
+            let m = w.match(/^([1-4]+):(.+)$/);
+            if (m) {
+                m[1].split("").map(p => {
+                    p = p - 1;
+                    let rep = Array.from("*".repeat(p) + m[2]);
+                    let add = ret.map(w0 => Array.from(w0).map((c,i) => (p <= i && rep[i]) ? rep[i] : c).join(""));
+                    //console.log(p,rep,ret, add);
+                    ret = ret.concat(add);
+                });
+                return;
+            } 
+            if (w.match(/^([1-4]+)=(.+)$/)) return;
+            //hoge();
+            if (Array.from(w).length == 4)
+                ret.push(w);
+            else
+                console.log(vword);
+            
+        });
+        return [... new Set(ret)];
+
+    };
+
+    const make_read_var = (vread) => {
+        if (vread.length == 1) return vread;
+
+        // make variation table
+        let ret = [vread[0]];
+        vread.slice(1).forEach(r => {
+            r = r.split("?").join("").split("#").join("");
+            let m = r.match(/^([1-4+]+):(.+)$/);
+            if (m) {
+                let is_plus = (m[1].slice(-1) == "+");
+
+                m[1].split("").filter(v => v != "+").map(p => {
+                    p = parseInt(p) - 1;
+                    let rep = ("_/".repeat(p) + m[2]).split("/");
+                    let add = ret.map(r0 => r0.split("/").map((c,i) => (p <= i && rep[i]) ? (is_plus ? (c + rep[i]) : rep[i]) : c).join("/"));
+                    ret = ret.concat(add);
+                });
+                return;
+            } 
+            //hoge();
+            if (r.split("/").length == 4)
+                ret.push(r);
+            else
+                console.log(vread);
+            
+        });
+        return [... new Set(ret)];
+
+    };
+    
+    const draw_table = () => {
+
+        let unitable = idiom.table;
+
+        // query check
+        let x = (location.href).split("#").pop();
+
+        // reading list
+        if (x.split("index").length > 1) return dump_reading_list();
+
+        // pick subset table
+        let qs = x.split("q=");
+        if (1 < qs.length && qs[1] != "") {
+            if (!unitable[0].sword)
+                unitable.map(v => {
+                    v.sword = make_word_var(v.word);
+                    v.sread = make_read_var(v.read);
+                    return v;
+                });
+            
+            let q = decodeURI(x.split("q=").pop()).normalize().split(",");
+            var subset = unitable.filter(v => q.every(q0 => {
+                q0 = q0.trim();
+                if (q0.match(/^[1-4]:/)) {
+                    let x = q0.split(":");
+                    let p = x[0] - 1;
+                    var q0 = x[1];
+                    if (v.sword.some(w => Array.from(w).slice(p, p + 1).shift() == Array.from(q0).shift())) return true;
+                    if (v.sread.some(r => conv.hira(r.split("/").slice(p, p + 1).shift()) == conv.hira(q0))) return true;
+                    return false;
+                }
+                if (q0.match(/^ref:/)) {
+                    let key = q0.split(":").pop().split("!");
+                    let x = key.pop();
+                    return (key.length == 0) ? v[x] : !v[x];
+                }
+                if (q0.match(/^eq:/)) {
+                    let x = q0.split(":").pop();
+                    return v.sword.some(w => w == x) || ((v.meanref || "-") == x);
+                }
+
+                if (v.word.join(";").indexOf(q0) != -1) return true;
+                if (q0.match(/[ぁ-ヶ]/)) {
+                    if (v.id == 51) console.log(v.sread, q0);
+                    if (conv.hira(v.sread.join(";")).indexOf(conv.hira(q0)) != -1) return true;
+                }
+                return false;
+            }));
+            $id("search").value = q;
+        } else {
+            var subset = unitable;
+            $id("search").value = "";
+        }
+
+        // draw pager
+        x = parseInt(x) || 0;
+        let head = subset.length > 100 ? [... new Array(Math.ceil(subset.length / 100))]
+            .map((v, i) => '<a href="#' + (i * 100) + 'q=' + $id("search").value + '">' + i + '</a>') : [];
+
+        // dump result
+        $id("result").innerHTML = "<div>[" + subset.length + "件] " + head.join(" ") + "</div><div id=idiomlist>"
+            + subset.slice(x, x + 100).map((v, i) => dump_row(v, x + i + 1)).join("") + "</div>";
+
+
+        [...$(".mean")].forEach($v => {
+            $v.parentNode.onclick = () => {
+                let $p = $v.parentNode.parentNode;
+
+                if ($p.children[4].style.display != "") {
+                    //$p.children[6].style.display = "";
+                    $p.children[4].style.display = "";
+                    //$p.children[5].style.display = "";
+                    return;
+                }
+                //$p.children[6].style.display = "block";
+                $p.children[4].style.display = "block";
+                //$p.children[5].style.display = "block";
+            };
+        });
+        [...$(".meanx")].forEach($v => {
+            $v.onclick = () => {
+                console.log($v);
+                if ($v.children[0].style.display != "none") {
+                    $v.children[0].style.display = "none";
+                    return;
+                }
+                [...$(".meanx")].forEach($v => $v.children[0].style.display = "none");
+                $v.children[0].style.display = "block";
+            };
+        });
+    };
+
+    // events
+    document.getElementsByName("sort").forEach(v => v.onchange = () => {resort(); draw_table(); });
+    window.addEventListener('hashchange', () => { draw_table(); });
+
+    $id("search").onkeydown = (e) => {
+        if (e.keyCode != 13) return;
+        location.href = "#q=" + $id("search").value;
+    };
+
+    resort();
+    draw_table();
+
+};
+
+const reading_list = (table) => {
+    let dicts = {};
+    table.forEach(v => {
+        v.read.forEach((vread, i) => {
+            if (vread.slice(-1) == "#") return;
+            if (i != 0) {
+                var r = vread.split(":");
+                if (r.length != 2) return;
+                if (!r[0].match(/^[1-4]$/)) return;
+                var x = r.shift() - 1;
+                //console.log(r);
+                r = r[0].split("/");
+            } else {
+                var r = vread.split("/");
+                var x = 0;
+            }
+            if (4 < r.length + x) return;
+            r = r.map(r0 => r0.replace(/^([ァ-ヶ]+)[のは1-9?]+$/, "$1"));
+            let w = Array.from(v.word[0]);
+            w.forEach((c,i)=> {
+                if (i < x) return;
+                if (!r[i-x]) return;
+                let read0 = r[i-x];
+                if(read0.indexOf("*") != -1) return;
+                if (!dicts[c]) dicts[c] = {};
+                if (!dicts[c][read0]) dicts[c][read0] = 0;
+                dicts[c][read0]++;
+            });
+        });
+    });
+    Object.keys(dicts).forEach(c => {
+        dicts[c] = Object.keys(dicts[c]).map(v => {return {r:v, n:dicts[c][v]}; });
+        dicts[c].sort((a,b) => {
+            let bk = (b.r.match(/[ァ-ヶ]/));
+            let ak = (a.r.match(/[ァ-ヶ]/));
+            if (bk && !ak) return 1;
+            if (ak && !bk) return -1;
+            return (b.n - a.n);
+        });
+    });
+    return dicts;
+};
+
+const dump_reading_list = () => {
+    let dicts = reading_list(idiom.table);
+    
+    $id("result").innerHTML = "<div id=kanjilist>" +
+        Object.keys(dicts).filter(v => dicts[v].length>1)// && dicts[v][0].n < 4)
+        .sort((a,b)=> dicts[a][0].r < dicts[b][0].r ? -1 : 1).map(key => {
+            return "<li class=kanji><a href='#q=" + key + "' class=headword>" + key + "</a><span class=read>" + 
+                dicts[key].map(v => {
+                    if (v.r.match(/[ァ-ヶ]/)) {
+                        if (3 < v.r.length) v.doubt = true;
+                        if (2 == v.r.length && !v.r.match(/[ア-ワ][イウキクチツッンャュョ]/)) v.doubt = true;
+                        if (3 == v.r.length && !v.r.match(/[キギシジチニヒビピミリ][ャュョ][ンウクツッ]/)) v.doubt = true;
+                        return "<a "+(v.doubt ? "class=p":"") + " href='#q=" + v.r + "," + key + "'>" + v.r + "</a>"
+                            + "<span class=freq>" + (v.doubt ? "※":"") + "(" + v.n + ")</span>";
+                    } else {
+                        return "<a class=o href='#q=" + v.r + "," + key + "'>" + v.r + "</a>"
+                            + "<span class=freq>" +(v.doubt ? "※":"")+"(" + v.n + ")</span>"
+                    }
+                }).join("")+"</span>";
+        }).join("") + "</div>";
+};
+
+const main = () => {
+    getfile("yoji.json", (ajax) => {
+        idiom.table = JSON.parse(ajax.responseText);
+        if (location.href.indexOf("?debug") == -1)
+            idiom.table = idiom.table.filter(v => 0 < v.id);
+        onloader();
+    });
+};
+
+
+main();
+
+</script>
+</html>
